@@ -94,13 +94,16 @@ for subj in data:
 exprs = []
 sample_donor = []
 sample_annot = []
-for key in data:
+for subj in data:
+    a = data[subj]['exprs'][data[subj]['noise'].astype(bool)].fillna(0).astype(np.float32)
+    print(a.shape, data[subj]['exprs'].shape)
     exprs.append( data[subj]['exprs'][data[subj]['noise'].astype(bool)].fillna(0).astype(np.float32) )
-    sample_donor.append(np.repeat(key, data[key]['exprs'].shape[1]))
-    sample_annot.append(data[key]['annot'].values[:, [4, 5, 7, 8, 9, 10, 11, 12]])
+    sample_donor.append(np.repeat(subj, data[subj]['exprs'].shape[1]))
+    sample_annot.append(data[subj]['annot'].values[:, [4, 5, 7, 8, 9, 10, 11, 12]])
 exprs = np.concatenate(exprs, axis=1)
 sample_donor = np.concatenate(sample_donor, axis=0)
 sample_annot = np.concatenate(sample_annot, axis=0)
+
 row_attrs = {"Gene" : probe_reannot_filter3['gene_symbol'].values,}
 col_attrs = {"CellID" :  np.arange(exprs.shape[1])}
 lp.create("AHBA_exprs_noNorm.loom", exprs, row_attrs, col_attrs)
@@ -108,6 +111,7 @@ lp.create("AHBA_exprs_noNorm.loom", exprs, row_attrs, col_attrs)
 exprs = pd.DataFrame(exprs)
 exprs.index = probe_reannot_filter3['gene_symbol'].values
 exprs.to_csv('AHBA_exprs_noNorm.csv')
+print(exprs.shape)
 
 
 
@@ -128,19 +132,23 @@ for subj in data:
 exprs = []
 sample_donor = []
 sample_annot = []
-for key in data:
-    exprs.append( data[key]['exprs'] )
-    sample_donor.append(np.repeat(key, data[key]['exprs'].shape[1]))
-    sample_annot.append(data[key]['annot'].values[:, [4, 5, 7, 8, 9, 10, 11, 12]])
+for subj in data:
+    a = data[subj]['exprs'][data[subj]['noise'].astype(bool)].fillna(0).astype(np.float32)
+    print(a.shape, data[subj]['exprs'].shape)
+    exprs.append( data[subj]['exprs'][data[subj]['noise'].astype(bool)].fillna(0).astype(np.float32) )
+    sample_donor.append(np.repeat(subj, data[subj]['exprs'].shape[1]))
+    sample_annot.append(data[subj]['annot'].values[:, [4, 5, 7, 8, 9, 10, 11, 12]])
 exprs = np.concatenate(exprs, axis=1)
 sample_donor = np.concatenate(sample_donor, axis=0)
 sample_annot = np.concatenate(sample_annot, axis=0)
+
 row_attrs = {"Gene" : probe_reannot_filter3['gene_symbol'].values,}
 col_attrs = {"CellID" :  np.arange(exprs.shape[1])}
-lp.create("AHBA_exprs_SRS.loom", exprs, row_attrs, col_attrs)
+lp.create("AHBA_exprs_noNorm.loom", exprs, row_attrs, col_attrs)
 
 exprs = pd.DataFrame(exprs)
 exprs.index = probe_reannot_filter3['gene_symbol'].values
-exprs.to_csv('AHBA_exprs_SRS.csv')
+exprs.to_csv('AHBA_exprs_noNorm.csv')
+print(exprs.shape)
 
 
