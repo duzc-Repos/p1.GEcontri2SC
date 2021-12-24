@@ -90,7 +90,41 @@ for subj in data:
     data[subj]['exprs'] = data[subj]['exprs'].loc[index_probe_keep_DS, :]
     data[subj]['noise'] = data[subj]['noise'].loc[index_probe_keep_DS, :]
 
-## 1.4 generate data for SCENIC
+## 1.4 no normalization
+exprs = []
+sample_donor = []
+sample_annot = []
+for key in data:
+    exprs.append( data[subj]['exprs'][data[subj]['noise'].astype(bool)].fillna(0).astype(np.float32) )
+    sample_donor.append(np.repeat(key, data[key]['exprs'].shape[1]))
+    sample_annot.append(data[key]['annot'].values[:, [4, 5, 7, 8, 9, 10, 11, 12]])
+exprs = np.concatenate(exprs, axis=1)
+sample_donor = np.concatenate(sample_donor, axis=0)
+sample_annot = np.concatenate(sample_annot, axis=0)
+row_attrs = {"Gene" : probe_reannot_filter3['gene_symbol'].values,}
+col_attrs = {"CellID" :  np.arange(exprs.shape[1])}
+lp.create("AHBA_exprs_noNorm.loom", exprs, row_attrs, col_attrs)
+
+exprs = pd.DataFrame(exprs)
+exprs.index = probe_reannot_filter3['gene_symbol'].values
+exprs.to_csv('AHBA_exprs_noNorm.csv')
+
+
+
+## 1.5 normalization
+for subj in data:
+    # sample normalization across genes: SRS
+    quantile = data[subj]['exprs'].quantile([0.25, 0.5, 0.75], axis=0)
+    scale_iqr = quantile.loc[0.75, :] - quantile.loc[0.25, :]/1.35
+    scale_robust_sigmoid = 1 / (1 + np.exp(-(data[subj]['exprs'] - quantile.loc[0.5, :])/scale_iqr))
+
+    # gene unitu across samples:
+    dat_range = scale_robust_sigmoid.max(axis=1)-scale_robust_sigmoid.min(axis=1)
+    gene_norm = ((scale_robust_sigmoid.T - scale_robust_sigmoid.min(axis=1))/dat_range).T
+
+    # set zero to background gene
+    data[subj]['exprs'] = gene_norm[data[subj]['noise'].astype(bool)].fillna(0).astype(np.float32)
+
 exprs = []
 sample_donor = []
 sample_annot = []
@@ -101,34 +135,12 @@ for key in data:
 exprs = np.concatenate(exprs, axis=1)
 sample_donor = np.concatenate(sample_donor, axis=0)
 sample_annot = np.concatenate(sample_annot, axis=0)
+row_attrs = {"Gene" : probe_reannot_filter3['gene_symbol'].values,}
+col_attrs = {"CellID" :  np.arange(exprs.shape[1])}
+lp.create("AHBA_exprs_SRS.loom", exprs, row_attrs, col_attrs)
 
-row_attrs = {"Gene" : probe_reannot_filter3['gene_symbol'].values,
-             "probe_name" : probe_reannot_filter3['probe_name'].values,
-             "entrez_id"  : probe_reannot_filter3['entrez_id'].values }
-col_attrs = {"CellID" :  np.arange(exprs.shape[1]),
-             "donor_id" : sample_donor,
-             "struc_acro" : sample_annot[:, 0],
-             "struc_name" : sample_annot[:, 1],
-             "mri_x"      : sample_annot[:, 2],
-             "mri_y"      : sample_annot[:, 3],
-             "mri_z"      : sample_annot[:, 4],
-             "mni_x"      : sample_annot[:, 5],
-             "mni_y"      : sample_annot[:, 6],
-             "mni_z"      : sample_annot[:, 7],
-             }
-lp.create("AHBA_filter.loom", exprs, row_attrs, col_attrs)
-print(exprs.shape)
-
-
-
-
-
-
-
-
-
-
-
-
+exprs = pd.DataFrame(exprs)
+exprs.index = probe_reannot_filter3['gene_symbol'].values
+exprs.to_csv('AHBA_exprs_SRS.csv')
 
 
